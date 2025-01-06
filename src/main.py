@@ -13,28 +13,35 @@ BASE_PATH = os.path.dirname(os.path.dirname(__file__))
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--test", action="store_true")
+    parser.add_argument("--epoch", default=15, type=int)
+    parser.add_argument("--batch_size", default=1, type=int)
+    parser.add_argument("--n_class", default=2, type=int)
     args = parser.parse_args()
 
-    epochs = 15
-    batch_size = 1
-    n_classes = 2
-
-    data_dict = {
-        'train': ['/apache_train_50_all_1.json', '/apache_train_50_all_2.json',
-                  '/apache_train_50_all_3.json', '/apache_train_50_all_4.json'],
-        'val': ['/apache_valid_50_all.json'],
-        'test': ['/apache_test.json'],
-        'labels': '/apache_labels.json'
+    # data_dict = {
+    #     'train': ['/apache_train_50_all_1.json', '/apache_train_50_all_2.json',
+    #               '/apache_train_50_all_3.json', '/apache_train_50_all_4.json'],
+    #     'val': ['/apache_valid_50_all.json'],
+    #     'test': ['/apache_test.json']
+    # }
+    # commit_lists = {
+    #     'train': '/apache_train_50_all.csv',
+    #     'val': '/apache_valid_50_all.csv',
+    #     'test': '/apache_test.csv'
+    # }
+    data_dicts = {
+        'train': ['/camel_train_1.json'],
+        'val': ['/camel_val_1.json'],
+        'test': ['/camel_val_1.json'],
     }
     commit_lists = {
-        'train': '/apache_train_50_all.csv',
-        'val': '/apache_valid_50_all.csv',
-        'test': '/apache_test.csv'
+        'train': '/camel_small.csv',
+        'val': '/camel_val.csv',
+        'test': '/camel_val.csv'
     }
-    metrics_file = 'apache_metrics_kamei.csv'
 
-    dataset = ASTDataset(data_dict, commit_lists, metrics_file=metrics_file, special_token=False)
-    hidden_size = len(dataset.vectorizer_model.vocabulary_) + 2   # plus supernode node feature and node colors
+    dataset = ASTDataset(data_dicts, commit_lists, special_token=False)
+    hidden_size = dataset.vectorizer_model.vector_size + 2  # plus supernode node feature and node colors
     metric_size = dataset.metrics.shape[1] - 1      # exclude commit_id column
     print('hidden_size is {}'.format(hidden_size))
     message_size = 32
@@ -44,29 +51,14 @@ if __name__ == '__main__':
     optimizer = torch.optim.Adam(model.parameters())
 
     # training
-    pretrain(model, optimizer, criterion, epochs, dataset)
+    pretrain(model, optimizer, criterion, args.epoch, dataset)
     # train_features = torch.load(os.path.join(BASE_PATH, 'trained_models/train_features.pt')).cpu().detach().numpy()
     # train_labels = torch.load(os.path.join(BASE_PATH, 'trained_models/train_labels.pt')).cpu().detach().numpy()
-    clf = RandomForestClassifier(n_estimators=300, random_state=42, n_jobs=-1)
+    # clf = RandomForestClassifier(n_estimators=300, random_state=42, n_jobs=-1)
     # train(clf, train_features, train_labels)
 
-    # resume training
-    # print('resume training')
-    # checkpoint = torch.load(os.path.join(BASE_PATH, 'trained_models/checkpoint.pt'))
-    # print('checkpoint loaded.')
-    # saved_stats = torch.load(os.path.join(BASE_PATH, 'trained_models/stats.pt'))
-    # print('stats loaded.')
-    # resume_training(checkpoint, saved_stats, model, optimizer, criterion, epochs, dataset)
-
-    # plotting performance and loss plots
-    # saved_stats = torch.load(os.path.join(BASE_PATH, 'trained_models/stats.pt'))
-    # print('stats loaded.')
-    # plot_training(saved_stats)
-
     if args.test:
-        # need map_location=torch.device('cpu') if on CPU
         model = torch.load(os.path.join(BASE_PATH, 'trained_models/model_best_auc.pt'))
-        test(model, dataset, clf)
-        test(model, dataset, clf)
-        test(model, dataset, clf)
-
+        test(model, dataset)
+        test(model, dataset)
+        test(model, dataset)

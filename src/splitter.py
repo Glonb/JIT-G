@@ -4,9 +4,9 @@ import numpy as np
 
 train = pd.read_csv('data/apache_train_50_80.csv')['commit_id']
 valid = pd.read_csv('data/apache_valid_50_80.csv')['commit_id']
-#test = pd.read_csv('data/apache_test.csv')['commit_id']
+# test = pd.read_csv('data/apache_test.csv')['commit_id']
 
-files = ['subtrees_apachejava_color_1.json', 'subtrees_apachejava_color_2.json','subtrees_apachejava_color_3.json',
+files = ['subtrees_apachejava_color_1.json', 'subtrees_apachejava_color_2.json', 'subtrees_apachejava_color_3.json',
          'subtrees_apachejava_color_4.json', 'subtrees_clean_color_1.json', 'subtrees_clean_color_2.json',
          'subtrees_clean_color_3.json', 'subtrees_clean_color_4.json', 'subtrees_clean_color_5.json',
          'subtrees_clean_color_6.json', 'subtrees_clean_color_7.json', 'subtrees_clean_color_8.json']
@@ -45,7 +45,7 @@ for i in range((len(train) // size) + 1):
     for f in files:
         with open('data/' + f) as fp:
             asts = json.load(fp)
-        for id in train[i*size:(i+1)*size]:
+        for id in train[i * size:(i + 1) * size]:
             if id in asts:
                 train_ast[id] = asts[id]
         print('switching file ...')

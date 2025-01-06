@@ -102,8 +102,8 @@ def get_asts(ast_filename, content_filename):
                         before_ast = b_visitor.get_ast()
                         files[i] = (files[i][0], before_ast, files[i][2])
                     except Exception as e:
-                        print commit, files[i][0], 'before'
-                        print e
+                        print(commit, files[i][0], 'before')
+                        print(e)
                         to_delete.append(i)
 
             if files[i][2] == 'SYNTAX ERROR':
@@ -123,8 +123,8 @@ def get_asts(ast_filename, content_filename):
                         after_ast = a_visitor.get_ast()
                         files[i] = (files[i][0], files[i][1], after_ast)
                     except Exception as e:
-                        print commit, files[i][0], 'after'
-                        print e
+                        print(commit, files[i][0], 'after')
+                        print(e)
                         to_delete.append(i)
 
         for idx in to_delete:
@@ -146,9 +146,9 @@ if __name__ == "__main__":
 #     print "\n"
     index = '1131'
     ast_dict = get_asts('asts_' + index + '_synerr.json', 'source_codes_0.25.json')
-    print 'asts fetched!'
-    # thanks to
+print('asts fetched!')
+# thanks to
     # https://stackoverflow.com/questions/25203209/how-to-fix-json-dumps-error-utf8-codec-cant-decode-byte-0xe0-in-position-2
     with open(data_path + '/asts_' + index + '.json', 'w') as fp:
         fp.write(json.dumps(ast_dict, encoding='latin1'))
-        print 'file saved'
+        print('file saved')

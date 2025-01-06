@@ -3,7 +3,7 @@ import time
 import pandas as pd
 import os
 import requests
-from pydriller import RepositoryMining, ModificationType
+from pydriller import Repository, ModificationType
 
 BASE_PATH = os.path.dirname(os.path.dirname(__file__))
 data_path = os.path.join(BASE_PATH, 'data')
@@ -71,16 +71,16 @@ def get_source_codes():
     # buggy_cntr = {'True': 0, 'False': 0}
     # ratio = 0.25
     for i, row in df.iterrows():
-        cmtid = row['commit_id']
+        cmt_id = row['commit_id']
         # if not buggy and buggy_cntr['True'] < buggy_cntr['False'] * ratio:
         # continue
-        content = miner.get_before_after_content(cmtid)
+        content = miner.get_before_after_content(cmt_id)
         if content is None:
-            print('\t\tcommit', cmtid, 'skipped!')
+            print('\t\tcommit', cmt_id, 'skipped!')
             continue
-        contents[cmtid] = content
+        contents[cmt_id] = content
         # buggy_cntr[str(buggy)] += 1
-        print('commit', cmtid, 'source codes fetched!')
+        print('commit', cmt_id, 'source codes fetched!')
 
     with open(data_path + '/source_codes_' + 'alltrain' + '.json', 'w') as fp:
         json.dump(contents, fp)
@@ -94,15 +94,15 @@ def get_project_name(filename):
 
     projects = []
     for i, row in df.iterrows():
-        cmtid = row['commit_id']
+        cmt_id = row['commit_id']
         proj = None
         while not proj:
             try:
-                response = miner.search_commit(cmtid)
+                response = miner.search_commit(cmt_id)
                 proj = response['repository']['full_name']
             except IndexError:
-                print('\t\t*****', cmtid)
-                proj = 'unkowncommit'
+                print('\t\t*****', cmt_id)
+                proj = 'unknown_commit'
             except TypeError:
                 time.sleep(30)
 
@@ -118,12 +118,12 @@ def get_project_name(filename):
 
 def update_n_files():
     df = pd.read_csv(data_path + '/newrawdata.csv', dtype={'revd': str, 'buggy': str, 'fix': str})
-    projects = ['https://github.com/' + p + '.git' for p in df['project'].unique() if p != 'unkowncommit']
-    repo_mining = RepositoryMining(projects, only_commits=df['commit_id'].tolist())
+    projects = ['https://github.com/' + p + '.git' for p in df['project'].unique() if p != 'unknown_commit']
+    repo_mining = Repository(projects, only_commits=df['commit_id'].tolist())
     nfs = dict()
     for i, c in enumerate(repo_mining.traverse_commits()):
         nf = 0
-        for m in c.modifications:
+        for m in c.modified_files:
             if m.filename.endswith('.py') and m.change_type is ModificationType.MODIFY:
                 nf += 1
         nfs[c.hash] = nf
@@ -132,7 +132,7 @@ def update_n_files():
 
     nf_list = []
     for i, row in df.iterrows():
-        if row['project'] == 'unkowncommit':
+        if row['project'] == 'unknown_commit':
             nf = row['nf']
         else:
             nf = nfs[row['commit_id']]

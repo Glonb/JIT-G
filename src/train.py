@@ -49,20 +49,19 @@ def pretrain(model, optimizer, criterion, epochs, dataset, so_far=0, resume=None
 
     print('training')
     for e in range(epochs):
-        print('\nepoch {:3d}/{}\n'.format((e + 1 + so_far), (epochs + so_far)))
+        print('epoch {:3d}/{}'.format((e + 1 + so_far), (epochs + so_far)))
         # training
         start = time.time()
         total_loss = 0
         y_scores = []
         y_true = []
-        # features_list = []
-        # label_list = []
 
         model.train()
         dataset.set_mode('train')
         print('len(data) is {}'.format(str(len(dataset))))
         for i in range(len(dataset)):
             data = dataset[i]
+            print()
             if data is None:
                 continue
             label = data[4]
@@ -72,8 +71,6 @@ def pretrain(model, optimizer, criterion, epochs, dataset, so_far=0, resume=None
                                      data[2].to(device), data[3].to(device),
                                      data[5].to(device))
 
-            # features_list.append(features)
-            # label_list.append(label)
             loss = criterion(output, torch.Tensor([label]).to(device))
             loss.backward()
             optimizer.step()
@@ -83,10 +80,10 @@ def pretrain(model, optimizer, criterion, epochs, dataset, so_far=0, resume=None
 
             total_loss += loss.item()
             if i % 100 == 0:
-                print('\t[{:5d}/{}]\tloss: {:.4f}'.format(
+                print('[{:5d}/{}]\tloss: {:.4f}'.format(
                     i, len(dataset), loss.item()))
 
-        print('\nepoch duration: {}'.format(time_since(start)))
+        print('epoch duration: {}'.format(time_since(start)))
 
         torch.save({
             'epoch': e + 1 + so_far,
@@ -121,8 +118,7 @@ def pretrain(model, optimizer, criterion, epochs, dataset, so_far=0, resume=None
                 output, features = model(data[0].to(device), data[1].to(device),
                                          data[2].to(device), data[3].to(device),
                                          data[5].to(device))
-                # features_list.append(features)
-                # label_list.append(label)
+
                 loss = criterion(output, torch.Tensor([label]).to(device))
                 total_loss += loss.item()
 
@@ -137,9 +133,7 @@ def pretrain(model, optimizer, criterion, epochs, dataset, so_far=0, resume=None
         if len(all_val_aucs) == 0 or val_auc > max(all_val_aucs):
             torch.save(model, os.path.join(BASE_PATH, 'trained_models/model_best_auc.pt'))
             print('* model_best_auc saved.')
-            # torch.save(torch.vstack(features_list), os.path.join(BASE_PATH, 'trained_models/train_features.pt'))
-            # torch.save(torch.Tensor(label_list), os.path.join(BASE_PATH, 'trained_models/train_labels.pt'))
-            # print('* features saved.')
+
         if len(all_val_losses) == 0 or val_loss < min(all_val_losses):
             torch.save(model, os.path.join(BASE_PATH, 'trained_models/model_least_loss.pt'))
             print('* model_least_loss saved.')
@@ -153,7 +147,7 @@ def pretrain(model, optimizer, criterion, epochs, dataset, so_far=0, resume=None
             'all_val_losses': all_val_losses,
             'all_val_aucs': all_val_aucs,
         }, os.path.join(BASE_PATH, 'trained_models/stats.pt'))
-        print('* stats saved.\n')
+        print('* stats saved.')
 
     torch.save(model, os.path.join(BASE_PATH, 'trained_models/model_final.pt'))
     print('* model_final saved.')
@@ -187,12 +181,10 @@ def train(clf, train_features, train_labels):
     print('metrics: AUC={}\n'.format(auc))
 
 
-def test(model, dataset, clf):
+def test(model, dataset):
     print('testing')
     y_scores = []
     y_true = []
-    # features_list = []
-    # label_list = []
 
     model.eval()
     dataset.set_mode('test')
@@ -207,18 +199,13 @@ def test(model, dataset, clf):
             output, features = model(data[0].to(device), data[1].to(device),
                                      data[2].to(device), data[3].to(device),
                                      data[5].to(device))
-            # features_list.append(features)
-            # label_list.append(label)
+
             y_scores.append(torch.sigmoid(output).item())
             y_true.append(label)
 
     pd.DataFrame({'y_true': y_true, 'y_score': y_scores}).to_csv(os.path.join(data_path, 'test_result.csv'))
     fpr, tpr, thresholds, auc = evaluate(y_true, y_scores)
     print('metrics: AUC={}\n\nthresholds={}\n'.format(auc, str(thresholds)))
-    # features = torch.vstack(features_list).cpu().detach().numpy()
-    # labels = torch.Tensor(label_list).cpu().detach().numpy()
-    # fpr, tpr, thresholds, auc = evaluate(labels, clf.predict_proba(features)[:, 1])
-    # print('metrics: AUC={}\n\nthresholds={}\n'.format(auc, str(thresholds)))
 
     plt.clf()
     plt.title('Receiver Operating Characteristic')

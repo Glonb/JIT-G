@@ -1,5 +1,4 @@
 import math
-
 from sklearn.linear_model import LogisticRegression
 import pickle
 import torch
