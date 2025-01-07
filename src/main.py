@@ -32,12 +32,12 @@ if __name__ == '__main__':
     data_dicts = {
         'train': ['/camel_train_1.json'],
         'val': ['/camel_val_1.json'],
-        'test': ['/camel_val_1.json'],
+        'test': ['/camel_test_1.json'],
     }
     commit_lists = {
-        'train': '/camel_small.csv',
+        'train': '/camel_train.csv',
         'val': '/camel_val.csv',
-        'test': '/camel_val.csv'
+        'test': '/camel_test.csv'
     }
 
     dataset = ASTDataset(data_dicts, commit_lists, special_token=False)
