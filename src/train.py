@@ -48,6 +48,7 @@ def pretrain(model, optimizer, criterion, epochs, dataset, so_far=0, resume=None
     # display_every = len(train_dataset) // 100
 
     print('training')
+    model = model.to(device)
     for e in range(epochs):
         print('epoch {:3d}/{}'.format((e + 1 + so_far), (epochs + so_far)))
         # training
@@ -66,7 +67,7 @@ def pretrain(model, optimizer, criterion, epochs, dataset, so_far=0, resume=None
                 continue
             label = data[4]
             optimizer.zero_grad()
-            model = model.to(device)
+            # model = model.to(device)
             output, features = model(data[0].to(device), data[1].to(device),
                                      data[2].to(device), data[3].to(device),
                                      data[5].to(device))
@@ -79,9 +80,11 @@ def pretrain(model, optimizer, criterion, epochs, dataset, so_far=0, resume=None
             y_true.append(label)
 
             total_loss += loss.item()
-            if i % 100 == 0:
-                print('[{:5d}/{}]\tloss: {:.4f}'.format(
-                    i, len(dataset), loss.item()))
+            # if i % 100 == 0:
+            #     print('[{:5d}/{}]\tloss: {:.4f}'.format(
+            #         i, len(dataset), loss.item()))
+            print('[{:5d}/{}]\tloss: {:.4f}'.format(
+                i, len(dataset), loss.item()))
 
         print('epoch duration: {}'.format(time_since(start)))
 
@@ -114,7 +117,7 @@ def pretrain(model, optimizer, criterion, epochs, dataset, so_far=0, resume=None
                 if data is None:
                     continue
                 label = data[4]
-                model = model.to(device)
+                # model = model.to(device)
                 output, features = model(data[0].to(device), data[1].to(device),
                                          data[2].to(device), data[3].to(device),
                                          data[5].to(device))
