@@ -130,13 +130,13 @@ class ASTDataset(Dataset):
         # self.c_list = pd.read_csv(data_path + self.commit_list[self.mode])['commit_id'].tolist()
         self.load_metrics()
         self.file_index = 0
-        with open(data_path + self.data_dict[self.mode][self.file_index], 'r') as fp:
+        with open(kaggle_path + self.data_dict[self.mode][self.file_index], 'r') as fp:
             self.ast_dict = json.load(fp)
 
     def switch_datafile(self):
         self.file_index += 1
         self.file_index %= len(self.data_dict[self.mode])
-        with open(data_path + self.data_dict[self.mode][self.file_index], 'r') as fp:
+        with open(kaggle_path + self.data_dict[self.mode][self.file_index], 'r') as fp:
             self.ast_dict = json.load(fp)
 
     @staticmethod
