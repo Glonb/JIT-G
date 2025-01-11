@@ -79,8 +79,10 @@ def pretrain(model, optimizer, criterion, epochs, dataset, so_far=0, resume=None
             y_true.append(label)
 
             total_loss += loss.item()
-            if i % 10 == 0:
-                print('[{:5d}/{}]\tloss: {:.4f}'.format(
+            # if i % 10 == 0:
+            #     print('[{:5d}/{}]\tloss: {:.4f}'.format(
+            #         i, len(dataset), loss.item()))
+            print('[{:5d}/{}]\tloss: {:.4f}'.format(
                     i, len(dataset), loss.item()))
 
         print('epoch duration: {}'.format(time_since(start)))
