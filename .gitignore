@@ -5,6 +5,5 @@
 *.pt
 *.dot
 *.png
-*.java
 repos
 **/.DS_Store

@@ -361,8 +361,8 @@ if __name__ == '__main__':
     #            ast_filename='camel_subtrees',
     #            already_file='already_filtered.csv',
     #            types=['.java']).filter_commits()
-    RunHandler(commit_file='camel_val.csv',
-               ast_filename='camel_val',
+    RunHandler(commit_file='camel_test.csv',
+               ast_filename='camel_test',
                already_file='already_filtered.csv',
                types=['.java']).store_subtrees()
     # subtree = SubTreeExtractor()

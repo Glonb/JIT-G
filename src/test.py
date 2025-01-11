@@ -87,40 +87,40 @@ data_path = os.path.join(BASE_PATH, 'data')
 # extractor.generate_dotfile()
 
 
-special_token = False
-files = ['/camel_train_1.json', '/camel_val_1.json']
-corpus = []
-for f_name in files:
-    with open(data_path + f_name) as fp:
-        subtrees = json.load(fp)
-    for commit, files in subtrees.items():
-        for f in files:
-            for node_feature in f[1][0]:  # before subtree features
-                if not special_token:
-
-                    corpus.append(node_feature)
-                else:
-                    feature = node_feature[0]
-                    if ':' in feature:
-                        feature = node_feature[0].split(':')[0]
-                    corpus.append(feature)
-            for node_feature in f[2][0]:  # after subtree features
-                if not special_token:
-
-                    corpus.append(node_feature)
-                else:
-                    feature = node_feature[0]
-                    if ':' in feature:
-                        feature = node_feature[0].split(':')[0]
-                    corpus.append(feature)
+# special_token = False
+# files = ['/camel_train_1.json', '/camel_val_1.json']
+# corpus = []
+# for f_name in files:
+#     with open(data_path + f_name) as fp:
+#         subtrees = json.load(fp)
+#     for commit, files in subtrees.items():
+#         for f in files:
+#             for node_feature in f[1][0]:  # before subtree features
+#                 if not special_token:
+#
+#                     corpus.append(node_feature)
+#                 else:
+#                     feature = node_feature[0]
+#                     if ':' in feature:
+#                         feature = node_feature[0].split(':')[0]
+#                     corpus.append(feature)
+#             for node_feature in f[2][0]:  # after subtree features
+#                 if not special_token:
+#
+#                     corpus.append(node_feature)
+#                 else:
+#                     feature = node_feature[0]
+#                     if ':' in feature:
+#                         feature = node_feature[0].split(':')[0]
+#                     corpus.append(feature)
 
 # for wd in corpus:
 #     print(wd)
-corpus.append(['<UNK>'])
-vectorizer_model = Word2Vec(corpus, vector_size=100, sg=0, window=5, min_count=1, workers=4)
-words = list(vectorizer_model.wv.key_to_index.keys())
-print(len(words))
-print(vectorizer_model.vector_size)
+# corpus.append(['<UNK>'])
+# vectorizer_model = Word2Vec(corpus, vector_size=100, sg=0, window=5, min_count=1, workers=4)
+# words = list(vectorizer_model.wv.key_to_index.keys())
+# print(len(words))
+# print(vectorizer_model.vector_size)
 # for word in words[:10]:
 #     print(word)
 # print(vectorizer_model.wv['<UNK>'])
@@ -156,3 +156,23 @@ print(vectorizer_model.vector_size)
 #         else:
 #             embeddings.append(np.zeros(model.vector_size))  # 未知特征使用零向量
 #     return np.mean(embeddings, axis=0)  # 对所有节点的词向量取平均
+
+import pandas as pd
+
+# 1. 加载CSV文件
+df = pd.read_csv('../data/apache/camel.csv')
+
+# 2. 筛选2003-2017年之间的数据
+df_filtered = df[(df['year'] >= 2003) & (df['year'] < 2017)]
+
+# 3. 按照2015年划分数据
+df_before_2015 = df_filtered[df_filtered['year'] < 2015]  # 2015之前的数据
+df_2015_and_after = df_filtered[df_filtered['year'] >= 2015]  # 2015及以后的数据
+
+# 4. 查看结果（可选）
+# print(df_before_2015.head())
+# print(df_2015_and_after.head())
+
+# 5. 保存为两个新的CSV文件
+df_before_2015.to_csv('camel_train.csv', index=False)
+df_2015_and_after.to_csv('camel_val.csv', index=False)
