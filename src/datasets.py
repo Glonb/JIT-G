@@ -11,7 +11,7 @@ from torch.utils.data import Dataset, DataLoader
 
 BASE_PATH = os.path.dirname(os.path.dirname(__file__))
 data_path = os.path.join(BASE_PATH, 'data')
-kaggle_path = '/kaggle/input'
+kaggle_path = '/kaggle/input/apache'
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 HIDDEN_SIZE = 768
