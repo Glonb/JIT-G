@@ -59,6 +59,7 @@ def pretrain(model, optimizer, criterion, epochs, dataset, so_far=0, resume=None
 
         model.train()
         dataset.set_mode('train')
+        print(next(model.parameters()).device)  # 检查模型的参数是否在 GPU 上
         print('len(data) is {}'.format(str(len(dataset))))
         for i in range(len(dataset)):
             data = dataset[i]
