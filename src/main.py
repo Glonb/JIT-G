@@ -30,7 +30,7 @@ if __name__ == '__main__':
     #     'test': '/apache_test.csv'
     # }
     data_dicts = {
-        'train': ['/camel_train_1.json'],
+        'train': ['/camel_train_1.json', '/camel_train_2.json'],
         'val': ['/camel_val_1.json'],
         'test': ['/camel_test_1.json'],
     }

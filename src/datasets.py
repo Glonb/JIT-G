@@ -11,6 +11,7 @@ from torch.utils.data import Dataset, DataLoader
 
 BASE_PATH = os.path.dirname(os.path.dirname(__file__))
 data_path = os.path.join(BASE_PATH, 'data')
+kaggle_path = '/kaggle/input'
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 HIDDEN_SIZE = 768
@@ -96,7 +97,7 @@ class ASTDataset(Dataset):
         files = list(self.data_dict['train']) + list(self.data_dict['val'])
         corpus = []
         for f_name in files:
-            with open(data_path + f_name) as fp:
+            with open(kaggle_path + f_name) as fp:
                 subtrees = json.load(fp)
             for commit, files in subtrees.items():
                 for f in files:
