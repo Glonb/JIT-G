@@ -185,6 +185,7 @@ def test(model, dataset):
     y_scores = []
     y_true = []
 
+    model = model.to(device)
     model.eval()
     dataset.set_mode('test')
     print('len(data) is {}'.format(str(len(dataset))))
@@ -194,7 +195,7 @@ def test(model, dataset):
             if data is None:
                 continue
             label = data[4]
-            model = model.to(device)
+            # model = model.to(device)
             output, features = model(data[0].to(device), data[1].to(device),
                                      data[2].to(device), data[3].to(device),
                                      data[5].to(device))
