@@ -45,9 +45,7 @@ def pretrain(model, optimizer, criterion, epochs, dataset, so_far=0, resume=None
         all_val_aucs = []
         all_val_losses = []
 
-    # display_every = len(train_dataset) // 100
-
-    print('training')
+    print('--------training--------')
     model = model.to(device)
     for e in range(epochs):
         print('epoch {:3d}/{}'.format((e + 1 + so_far), (epochs + so_far)))
@@ -59,7 +57,6 @@ def pretrain(model, optimizer, criterion, epochs, dataset, so_far=0, resume=None
 
         model.train()
         dataset.set_mode('train')
-        print(next(model.parameters()).device)  # 检查模型的参数是否在 GPU 上
         print('len(data) is {}'.format(str(len(dataset))))
         for i in range(len(dataset)):
             data = dataset[i]
@@ -186,7 +183,7 @@ def train(clf, train_features, train_labels):
 
 
 def test(model, dataset):
-    print('testing')
+    print('--------testing--------')
     y_scores = []
     y_true = []
 

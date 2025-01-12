@@ -16,6 +16,7 @@ if __name__ == '__main__':
     parser.add_argument("--epoch", default=15, type=int)
     parser.add_argument("--batch_size", default=1, type=int)
     parser.add_argument("--n_class", default=2, type=int)
+    parser.add_argument("--message_size", default=32, type=int)
     args = parser.parse_args()
 
     # data_dict = {
@@ -35,18 +36,17 @@ if __name__ == '__main__':
         'test': ['/camel_test_1.json'],
     }
     commit_lists = {
-        'train': '/camel_train.csv',
-        'val': '/camel_val.csv',
-        'test': '/camel_test.csv'
+        'train': '/camel_train_filtered.csv',
+        'val': '/camel_val_filtered.csv',
+        'test': '/camel_test_filtered.csv'
     }
 
     dataset = ASTDataset(data_dicts, commit_lists, special_token=False)
     hidden_size = dataset.vectorizer_model.vector_size + 2  # plus supernode node feature and node colors
     metric_size = dataset.metrics.shape[1] - 1      # exclude commit_id column
     print('hidden_size is {}'.format(hidden_size))
-    message_size = 32
 
-    model = JITGNN(hidden_size, message_size, metric_size)
+    model = JITGNN(hidden_size, args.message_size, metric_size)
     criterion = nn.BCEWithLogitsLoss()
     optimizer = torch.optim.Adam(model.parameters())
 

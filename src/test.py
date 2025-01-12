@@ -157,22 +157,40 @@ data_path = os.path.join(BASE_PATH, 'data')
 #             embeddings.append(np.zeros(model.vector_size))  # 未知特征使用零向量
 #     return np.mean(embeddings, axis=0)  # 对所有节点的词向量取平均
 
+# import pandas as pd
+
+# # 1. 加载CSV文件
+# df = pd.read_csv('../data/apache/camel.csv')
+#
+# # 2. 筛选2003-2017年之间的数据
+# df_filtered = df[(df['year'] >= 2003) & (df['year'] < 2017)]
+#
+# # 3. 按照2015年划分数据
+# df_before_2015 = df_filtered[df_filtered['year'] < 2015]  # 2015之前的数据
+# df_2015_and_after = df_filtered[df_filtered['year'] >= 2015]  # 2015及以后的数据
+#
+# # 4. 查看结果（可选）
+# # print(df_before_2015.head())
+# # print(df_2015_and_after.head())
+#
+# # 5. 保存为两个新的CSV文件
+# df_before_2015.to_csv('camel_train.csv', index=False)
+# df_2015_and_after.to_csv('camel_val.csv', index=False)
+
 import pandas as pd
 
-# 1. 加载CSV文件
-df = pd.read_csv('../data/apache/camel.csv')
+# 读取 CSV 文件
+filtered_df = pd.read_csv('../data/already_filtered.csv')
+train_df = pd.read_csv('../data/camel_train.csv')
+val_df = pd.read_csv('../data/camel_val.csv')
+test_df = pd.read_csv('../data/camel_test.csv')
 
-# 2. 筛选2003-2017年之间的数据
-df_filtered = df[(df['year'] >= 2003) & (df['year'] < 2017)]
+# 筛选出 commit_id 在 filtered_df 中的行
+train_filtered = train_df[train_df['commit_id'].isin(filtered_df['commit_id'])]
+val_filtered = val_df[val_df['commit_id'].isin(filtered_df['commit_id'])]
+test_filtered = test_df[test_df['commit_id'].isin(filtered_df['commit_id'])]
 
-# 3. 按照2015年划分数据
-df_before_2015 = df_filtered[df_filtered['year'] < 2015]  # 2015之前的数据
-df_2015_and_after = df_filtered[df_filtered['year'] >= 2015]  # 2015及以后的数据
-
-# 4. 查看结果（可选）
-# print(df_before_2015.head())
-# print(df_2015_and_after.head())
-
-# 5. 保存为两个新的CSV文件
-df_before_2015.to_csv('camel_train.csv', index=False)
-df_2015_and_after.to_csv('camel_val.csv', index=False)
+# 保存筛选后的文件
+train_filtered.to_csv('../data/camel_train_filtered.csv', index=False)
+val_filtered.to_csv('../data/camel_val_filtered.csv', index=False)
+test_filtered.to_csv('../data/camel_test_filtered.csv', index=False)
