@@ -9,7 +9,7 @@ from sklearn import metrics
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import roc_auc_score, precision_recall_curve
 import pandas as pd
-from metrics import roc_auc
+from metrics import roc_auc, calculate_metrics
 import matplotlib.pyplot as plt
 
 BASE_PATH = os.path.dirname(os.path.dirname(__file__))
@@ -31,6 +31,10 @@ def time_since(since):
 
 def evaluate(label, output):
     return roc_auc(np.array(label), np.array(output))
+
+
+def evaluate_more(label, output):
+    return calculate_metrics(np.array(label), np.array(output))
 
 
 def pretrain(model, optimizer, criterion, epochs, dataset, so_far=0, resume=None):
@@ -93,8 +97,10 @@ def pretrain(model, optimizer, criterion, epochs, dataset, so_far=0, resume=None
 
         training_loss = total_loss / len(dataset)
         _, _, _, training_auc = evaluate(y_true, y_scores)
+        precision, recall, f1, mcc = evaluate_more(y_true, y_scores)
         print('\n<==== training loss = {:.4f} ====>'.format(training_loss))
-        print('metrics: AUC={}'.format(training_auc))
+        print('metrics: AUC={}\tPrecision={}\t'
+              'Recall={}\tF1={}\tMCC={}'.format(training_auc, precision, recall, f1, mcc))
 
         all_training_losses.append(training_loss)
         all_training_aucs.append(training_auc)
@@ -126,8 +132,10 @@ def pretrain(model, optimizer, criterion, epochs, dataset, so_far=0, resume=None
 
         val_loss = total_loss / len(dataset)
         _, _, _, val_auc = evaluate(y_true, y_scores)
+        precision, recall, f1, mcc = evaluate_more(y_true, y_scores)
         print('<==== validation loss = {:.4f} ====>'.format(val_loss))
-        print('metrics: AUC={}\n'.format(val_auc))
+        print('metrics: AUC={}\tPrecision={}\t'
+              'Recall={}\tF1={}\tMCC={}\n'.format(val_auc, precision, recall, f1, mcc))
 
         if len(all_val_aucs) == 0 or val_auc > max(all_val_aucs):
             torch.save(model, os.path.join(BASE_PATH, 'trained_models/model_best_auc.pt'))
@@ -205,7 +213,12 @@ def test(model, dataset):
 
     pd.DataFrame({'y_true': y_true, 'y_score': y_scores}).to_csv(os.path.join(data_path, 'test_result.csv'))
     fpr, tpr, thresholds, auc = evaluate(y_true, y_scores)
-    print('metrics: AUC={}\n\nthresholds={}\n'.format(auc, str(thresholds)))
+    precision, recall, f1, mcc = evaluate_more(y_true, y_scores)
+    # print('metrics: AUC={}\n'.format(auc))
+    print('metrics: AUC={}\tPrecision={}\t'
+          'Recall={}\tF1={}\tMCC={}\n'.format(auc, precision, recall, f1, mcc))
+
+    # print('thresholds: {}\n'.format(str(thresholds)))
 
     plt.clf()
     plt.title('Receiver Operating Characteristic')

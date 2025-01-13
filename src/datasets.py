@@ -11,7 +11,7 @@ from torch.utils.data import Dataset, DataLoader
 
 BASE_PATH = os.path.dirname(os.path.dirname(__file__))
 data_path = os.path.join(BASE_PATH, 'data')
-kaggle_path = '/kaggle/input/apache'
+cloud_path = '/kaggle/input/apache'
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 HIDDEN_SIZE = 768
@@ -31,7 +31,6 @@ class ASTDataset(Dataset):
         self.metrics = None
         self.labels = None
         self.load_metrics()
-        # self.learn_vectorizer()
         self.learn_word2vec()
 
     def load_metrics(self):
@@ -50,54 +49,11 @@ class ASTDataset(Dataset):
                                      'ndev', 'age', 'nuc', 'aexp', 'arexp', 'asexp']]
         self.metrics = self.metrics.fillna(value=0)
 
-    # def learn_vectorizer(self):
-    #     files = list(self.data_dict['train']) + list(self.data_dict['val'])
-    #     corpus = []
-    #     for f_name in files:
-    #         with open(data_path + f_name) as fp:
-    #             subtrees = json.load(fp)
-    #         for commit, files in subtrees.items():
-    #             for f in files:
-    #                 for node_feature in f[1][0]:    # before subtree features
-    #                     if len(node_feature) > 1:  # None
-    #                         corpus.append(node_feature)
-    #                     else:
-    #                         if not self.special_token:
-    #                             corpus.append(node_feature[0])
-    #                         else:
-    #                             feature = node_feature[0]
-    #                             if ':' in node_feature[0]:
-    #                                 feat_type = node_feature[0].split(':')[0]
-    #                                 feature = feat_type + ' ' + '<' + feat_type[
-    #                                                                   :3].upper() + '>'
-    #                                 # e.g. number: 14 -> number <NUM>
-    #                             corpus.append(feature)
-    #                 for node_feature in f[2][0]:    # after subtree features
-    #                     if len(node_feature) > 1:  # None
-    #                         corpus.append(node_feature)
-    #                     else:
-    #                         if not self.special_token:
-    #                             corpus.append(node_feature[0])
-    #                         else:
-    #                             feature = node_feature[0]
-    #                             if ':' in node_feature[0]:
-    #                                 feat_type = node_feature[0].split(':')[0]
-    #                                 feature = feat_type + ' ' + '<' + feat_type[
-    #                                                                   :3].upper() + '>'
-    #                                 # e.g. number: 14 -> number <NUM>
-    #                             corpus.append(feature)
-    #
-    #     vectorizer = CountVectorizer(lowercase=False, max_features=100000, binary=True)
-    #     self.vectorizer_model = vectorizer.fit(corpus)
-    #
-    #     # with open(os.path.join(BASE_PATH, 'trained_models/vectorizer.pkl'), 'wb') as fp:
-    #     #     pickle.dump(vectorizer, fp)
-
     def learn_word2vec(self):
         files = list(self.data_dict['train']) + list(self.data_dict['val'])
         corpus = []
         for f_name in files:
-            with open(kaggle_path + f_name) as fp:
+            with open(cloud_path + f_name) as fp:
                 subtrees = json.load(fp)
             for commit, files in subtrees.items():
                 for f in files:
@@ -130,13 +86,13 @@ class ASTDataset(Dataset):
         # self.c_list = pd.read_csv(data_path + self.commit_list[self.mode])['commit_id'].tolist()
         self.load_metrics()
         self.file_index = 0
-        with open(kaggle_path + self.data_dict[self.mode][self.file_index], 'r') as fp:
+        with open(cloud_path + self.data_dict[self.mode][self.file_index], 'r') as fp:
             self.ast_dict = json.load(fp)
 
     def switch_datafile(self):
         self.file_index += 1
         self.file_index %= len(self.data_dict[self.mode])
-        with open(kaggle_path + self.data_dict[self.mode][self.file_index], 'r') as fp:
+        with open(cloud_path + self.data_dict[self.mode][self.file_index], 'r') as fp:
             self.ast_dict = json.load(fp)
 
     @staticmethod
