@@ -37,7 +37,7 @@ def evaluate_more(label, output):
     return calculate_metrics(np.array(label), np.array(output))
 
 
-def pretrain(model, optimizer, criterion, epochs, dataset, so_far=0, resume=None):
+def pretrain(model, optimizer, criterion, epochs, train_loader, val_loader, so_far=0, resume=None):
     if resume:
         all_training_aucs = resume['all_training_aucs']
         all_training_losses = resume['all_training_losses']
@@ -60,19 +60,25 @@ def pretrain(model, optimizer, criterion, epochs, dataset, so_far=0, resume=None
         y_true = []
 
         model.train()
-        dataset.set_mode('train')
-        print('len(data) is {}'.format(str(len(dataset))))
-        for i in range(len(dataset)):
-            data = dataset[i]
-            # print()
+        i = 0
+        for data in train_loader:
             if data is None:
                 continue
-            label = data[4]
+
+            before_embeddings, before_adj, after_embeddings, after_adj, label, metric = data
             optimizer.zero_grad()
-            # model = model.to(device)
-            output, features = model(data[0].to(device), data[1].to(device),
-                                     data[2].to(device), data[3].to(device),
-                                     data[5].to(device))
+
+            # 将数据移动到GPU
+            before_embeddings = before_embeddings.to(device)
+            before_adj = before_adj.to(device)
+            after_embeddings = after_embeddings.to(device)
+            after_adj = after_adj.to(device)
+            label = label.to(device)
+            metric = metric.to(device)
+
+            output, features = model(before_embeddings, before_adj,
+                                     after_embeddings, after_adj,
+                                     metric)
 
             loss = criterion(output, torch.Tensor([label]).to(device))
             loss.backward()
@@ -82,20 +88,20 @@ def pretrain(model, optimizer, criterion, epochs, dataset, so_far=0, resume=None
             y_true.append(label)
 
             total_loss += loss.item()
+            i += 1
             if i % 100 == 0:
-                print('[{:5d}/{}]\tloss: {:.4f}'.format(
-                    i, len(dataset), loss.item()))
+                print('[{:5d}]\tloss: {:.4f}'.format(i, loss.item()))
 
         print('epoch duration: {}'.format(time_since(start)))
 
-        torch.save({
-            'epoch': e + 1 + so_far,
-            'model_state_dict': model.state_dict(),
-            'optimizer_state_dict': optimizer.state_dict()
-        }, os.path.join(BASE_PATH, 'trained_models/checkpoint.pt'))
-        print('* checkpoint saved.')
+        # torch.save({
+        #     'epoch': e + 1 + so_far,
+        #     'model_state_dict': model.state_dict(),
+        #     'optimizer_state_dict': optimizer.state_dict()
+        # }, os.path.join(BASE_PATH, 'trained_models/checkpoint.pt'))
+        # print('* checkpoint saved.')
 
-        training_loss = total_loss / len(dataset)
+        training_loss = total_loss / i
         _, _, _, training_auc = evaluate(y_true, y_scores)
         precision, recall, f1, mcc = evaluate_more(y_true, y_scores)
         print('\n<==== training loss = {:.4f} ====>'.format(training_loss))
@@ -110,19 +116,27 @@ def pretrain(model, optimizer, criterion, epochs, dataset, so_far=0, resume=None
         y_scores = []
         y_true = []
 
+        print('--------validation--------')
         model.eval()
-        dataset.set_mode('val')
-        print('len(data) is {}'.format(str(len(dataset))))
+        i = 0
         with torch.no_grad():
-            for i in range(len(dataset)):
-                data = dataset[i]
+            for data in val_loader:
                 if data is None:
                     continue
-                label = data[4]
-                # model = model.to(device)
-                output, features = model(data[0].to(device), data[1].to(device),
-                                         data[2].to(device), data[3].to(device),
-                                         data[5].to(device))
+
+                before_embeddings, before_adj, after_embeddings, after_adj, label, metric = data
+
+                # 将数据移动到GPU
+                before_embeddings = before_embeddings.to(device)
+                before_adj = before_adj.to(device)
+                after_embeddings = after_embeddings.to(device)
+                after_adj = after_adj.to(device)
+                label = label.to(device)
+                metric = metric.to(device)
+
+                output, features = model(before_embeddings, before_adj,
+                                         after_embeddings, after_adj,
+                                         metric)
 
                 loss = criterion(output, torch.Tensor([label]).to(device))
                 total_loss += loss.item()
@@ -130,7 +144,9 @@ def pretrain(model, optimizer, criterion, epochs, dataset, so_far=0, resume=None
                 y_scores.append(torch.sigmoid(output).item())
                 y_true.append(label)
 
-        val_loss = total_loss / len(dataset)
+                i += 1
+
+        val_loss = total_loss / i
         _, _, _, val_auc = evaluate(y_true, y_scores)
         precision, recall, f1, mcc = evaluate_more(y_true, y_scores)
         print('<==== validation loss = {:.4f} ====>'.format(val_loss))
@@ -188,25 +204,31 @@ def train(clf, train_features, train_labels):
     print('metrics: AUC={}\n'.format(auc))
 
 
-def test(model, dataset):
+def test(model, test_loader):
     print('--------testing--------')
     y_scores = []
     y_true = []
 
     model = model.to(device)
     model.eval()
-    dataset.set_mode('test')
-    print('len(data) is {}'.format(str(len(dataset))))
     with torch.no_grad():
-        for i in range(len(dataset)):
-            data = dataset[i]
+        for data in test_loader:
             if data is None:
                 continue
-            label = data[4]
-            # model = model.to(device)
-            output, features = model(data[0].to(device), data[1].to(device),
-                                     data[2].to(device), data[3].to(device),
-                                     data[5].to(device))
+
+            before_embeddings, before_adj, after_embeddings, after_adj, label, metric = data
+
+            # 将数据移动到GPU
+            before_embeddings = before_embeddings.to(device)
+            before_adj = before_adj.to(device)
+            after_embeddings = after_embeddings.to(device)
+            after_adj = after_adj.to(device)
+            label = label.to(device)
+            metric = metric.to(device)
+
+            output, features = model(before_embeddings, before_adj,
+                                     after_embeddings, after_adj,
+                                     metric)
 
             y_scores.append(torch.sigmoid(output).item())
             y_true.append(label)

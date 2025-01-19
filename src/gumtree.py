@@ -280,6 +280,7 @@ class RunHandler:
                 commit = Git('../repos/' + p.split('/')[1].split('-')[0]).get_commit(c)
             logging.info('Commit #%s in %s from %s', commit.hash, commit.committer_date, commit.author.name)
             if self.is_filtered(commit):
+                print('commit_id {} has been filtered!'.format(c))
                 continue
             else:
                 filtered.append(c)
@@ -302,6 +303,7 @@ class RunHandler:
             logging.info('Commit #%s in %s from %s', commit.hash, commit.committer_date, commit.author.name)
             commit_start = time.time()
             for m in commit.modified_files:
+                # print(m.filename)
                 if not m.filename.endswith(tuple(self.types)):
                     continue
                 filepath = m.new_path if m.new_path is not None else m.old_path
@@ -311,7 +313,7 @@ class RunHandler:
                 try:
                     b_dot, a_dot = gumtree.get_dotfiles(f)
                 except SyntaxError:
-                    print('\t\t\t\tsource code has syntax error. PASS!')
+                    print('******** source code has syntax error. PASS! ********')
                     continue
                 subtree = SubTreeExtractor(b_dot)
                 b_subtree = subtree.extract_subtree()
@@ -321,7 +323,7 @@ class RunHandler:
                 # to exclude ast with no red nodes (which have empty subtrees)
                 # this includes F1 in McIntosh & Kamei (comment and whitespace filtering)
                 if len(b_subtree[0]) == 0 and len(a_subtree[0]) == 0:
-                    # print("Bad !!!!!!!!!!!!!!!!!")
+                    print("******** no subtree found! *******")
                     continue
                 elif len(b_subtree[0]) == 0:
                     b_subtree[0].append(['None'])
@@ -358,13 +360,15 @@ class RunHandler:
 
 if __name__ == '__main__':
     # RunHandler(commit_file='camel.csv',
-    #            ast_filename='camel_subtrees',
+    #            ast_filename='camel_filtered',
     #            already_file='already_filtered.csv',
-    #            types=['.java']).filter_commits()
-    RunHandler(commit_file='camel_test.csv',
-               ast_filename='camel_test',
+    #            types=['.java'],
+    #            limit=50000).filter_commits()
+    RunHandler(commit_file='camel_train_filtered.csv',
+               ast_filename='camel_train_all',
                already_file='already_filtered.csv',
-               types=['.java']).store_subtrees()
+               types=['.java'],
+               limit=50000).store_subtrees()
     # subtree = SubTreeExtractor()
     # subtree.read_ast()
     # subtree.extract_subtree()

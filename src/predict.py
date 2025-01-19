@@ -1,6 +1,6 @@
 import os
 
-from datasets import get_tse
+# from datasets import get_tse
 from models import LogisticRegressionModel
 
 if __name__ == '__main__':

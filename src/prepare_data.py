@@ -1,35 +1,31 @@
 import os
-import pickle
+import h5py
 import torch
 import numpy as np
 from torch.utils.data import Dataset, DataLoader
 import pandas as pd
 from gensim.models import Word2Vec
 import json
+from tqdm import tqdm
 
 BASE_PATH = os.path.dirname(os.path.dirname(__file__))
 data_path = os.path.join(BASE_PATH, 'data')
 
+data_lists = {
+    'train': '/camel_train_1.json',
+    'val': '/camel_val_1.json',
+    'test': '/camel_test_1.json'
+}
+commit_lists = {
+    'train': '/camel_train_filtered.csv',
+    'val': '/camel_val_filtered.csv',
+    'test': '/camel_test_filtered.csv'
+}
 
-def preprocess_data(data_dict, commit_list, special_token=False, out_file="preprocessed_data.pkl"):
-    with open(data_path + data_dict['train'], 'r') as fp:
-        ast_dict = json.load(fp)
 
-    metrics = pd.read_csv(data_path + commit_list['train'])
-    metrics['buggy'] = metrics['buggy'].apply(lambda x: 1 if x == True else 0)
-    labels = metrics.set_index('commit_id')['buggy'].to_dict()
-    c_list = metrics['commit_id'].tolist()
-
-    metrics = metrics.drop(
-        ['author_date', 'bugcount', 'fixcount', 'revd', 'tcmt', 'oexp',
-         'orexp', 'osexp', 'osawr', 'project', 'buggy', 'fix'],
-        axis=1, errors='ignore')
-    metrics = metrics[['commit_id', 'la', 'ld', 'nf', 'nd', 'ns', 'ent',
-                       'ndev', 'age', 'nuc', 'aexp', 'arexp', 'asexp']]
-    metrics = metrics.fillna(value=0)
-
+def learn_word2vec(special_token=False):
     # 载入词向量模型
-    files = list(data_dict['train']) + list(data_dict['val'])
+    files = list(data_lists['train']) + list(data_lists['val'])
     corpus = []
     for f_name in files:
         with open(data_path + f_name) as fp:
@@ -54,11 +50,45 @@ def preprocess_data(data_dict, commit_list, special_token=False, out_file="prepr
                         corpus.append(feature)
 
     corpus.append(['<UNK>'])
-    vectorizer_model = Word2Vec(corpus, vector_size=100, window=5, min_count=1, workers=4)
+    vectorizer_model = Word2Vec(corpus, vector_size=100, window=7, min_count=1, workers=4)
+
+    print(len(vectorizer_model.wv.key_to_index))
+
+    vectorizer_model.save('../trained_models/wv_camel.model')
+
+
+wv_model = Word2Vec.load('../trained_models/wv_camel.model')
+
+
+def preprocess_data(data_list, commit_list, out_file, mode='train'):
+    with open(data_path + data_list[mode], 'r') as fp:
+        ast_dict = json.load(fp)
+
+    metrics = pd.read_csv(data_path + commit_list[mode])
+    metrics['buggy'] = metrics['buggy'].apply(lambda x: 1 if x == True else 0)
+    metrics['fix'] = metrics['fix'].apply(lambda x: 1 if x == True else 0)
+    labels = metrics.set_index('commit_id')['buggy'].to_dict()
+    c_list = metrics['commit_id'].tolist()
+
+    # # clean for openstack and qt
+    # metrics = metrics.drop(
+    #     ['author_date', 'bugcount', 'fixcount', 'revd', 'nrev', 'rtime',
+    #      'tcmt', 'hcmt', 'self', 'app', 'rexp', 'oexp', 'rrexp',
+    #      'orexp', 'rsexp', 'osexp', 'asawr', 'osawr'],
+    #     axis=1, errors='ignore')
+    # metrics = metrics[['commit_id', 'la', 'ld', 'nf', 'nd', 'ns', 'ent',
+    #                    'ndev', 'age', 'nuc', 'aexp', 'arexp', 'asexp']]
+
+    # clean for apachejit
+    metrics = metrics.drop(
+        ['project', 'buggy', 'year', 'author_date'], axis=1, errors='ignore')
+    metrics = metrics[['commit_id', 'fix', 'la', 'ld', 'nf', 'nd', 'ns', 'ent',
+                       'ndev', 'age', 'nuc', 'aexp', 'arexp', 'asexp']]
+    metrics = metrics.fillna(value=0)
 
     preprocessed_data = []
 
-    for c in c_list:
+    for c in tqdm(c_list, desc='transform subtree', unit='commits'):
         try:
             commit = ast_dict.get(c, None)
         except Exception as e:
@@ -66,17 +96,8 @@ def preprocess_data(data_dict, commit_list, special_token=False, out_file="prepr
             continue
 
         if commit is None:
+            print('No commit data for {}'.format(c))
             continue
-
-        label = labels.get(c, 0)
-
-        # 构建 metrics
-        try:
-            metrics_data = metrics[metrics['commit_id'] == c].drop(columns=['commit_id']).to_numpy(dtype=np.float32)[0,
-                           :]
-            metrics_tensor = torch.FloatTensor(metrics_data)
-        except IndexError:
-            metrics_tensor = torch.zeros(len(metrics.columns) - 1, dtype=torch.float)
 
         b_node_tokens, b_edges, b_colors = [], [[], []], []
         a_node_tokens, a_edges, a_colors = [], [[], []], []
@@ -101,10 +122,25 @@ def preprocess_data(data_dict, commit_list, special_token=False, out_file="prepr
             b_nodes_so_far += b_n_nodes
             a_nodes_so_far += a_n_nodes
 
-        before_embeddings = get_embedding(b_node_tokens, b_colors, vectorizer_model)
+        if b_nodes_so_far + a_nodes_so_far > 29000 or b_nodes_so_far > 19000 or a_nodes_so_far > 19000:
+            print()
+            print('{} is a large commit, skip!'.format(c))
+            continue
+
+        before_embeddings = get_embedding(b_node_tokens, b_colors)
         before_adj = get_adjacency_matrix(b_nodes_so_far, b_edges[0], b_edges[1])
-        after_embeddings = get_embedding(a_node_tokens, a_colors, vectorizer_model)
+        after_embeddings = get_embedding(a_node_tokens, a_colors)
         after_adj = get_adjacency_matrix(a_nodes_so_far, a_edges[0], a_edges[1])
+
+        label = labels[c]
+
+        # 构建 metrics
+        try:
+            metrics_data = normalize(
+                metrics[metrics['commit_id'] == c].drop(columns=['commit_id']).to_numpy(dtype=np.float32)[0, :])
+            metrics_tensor = torch.FloatTensor(metrics_data)
+        except IndexError:
+            metrics_tensor = torch.zeros(len(metrics.columns) - 1, dtype=torch.float)
 
         training_data = [before_embeddings, before_adj, after_embeddings, after_adj, label, metrics_tensor]
 
@@ -112,8 +148,19 @@ def preprocess_data(data_dict, commit_list, special_token=False, out_file="prepr
             preprocessed_data.append(training_data)
 
     # Save data to a file
-    with open(data_path + out_file, 'wb') as f:
-        pickle.dump(preprocessed_data, f)
+    with h5py.File(data_path + out_file, 'w') as f:
+        print('data len: {}'.format(len(preprocessed_data)))
+        print('save data to {}'.format(data_path + out_file))
+        # 创建数据集
+        for idx, (before_embeddings, before_adj, after_embeddings, after_adj, label, metrics_tensor) in enumerate(
+                preprocessed_data):
+            # 假设每个元素是一个数组或列表，将它们转换为numpy数组
+            f.create_dataset(f"before_embeddings_{idx}", data=np.array(before_embeddings))
+            f.create_dataset(f"before_adj_{idx}", data=np.array(before_adj))
+            f.create_dataset(f"after_embeddings_{idx}", data=np.array(after_embeddings))
+            f.create_dataset(f"after_adj_{idx}", data=np.array(after_adj))
+            f.create_dataset(f"label_{idx}", data=np.array(label))
+            f.create_dataset(f"metrics_tensor_{idx}", data=np.array(metrics_tensor))
 
 
 def get_adjacency_matrix(n_nodes, src, dst):
@@ -131,17 +178,17 @@ def get_adjacency_matrix(n_nodes, src, dst):
     return torch.FloatTensor(adj)
 
 
-def get_embedding(file_node_tokens, colors, vectorizer_model):
+def get_embedding(file_node_tokens, colors):
     """获取词嵌入"""
     embeddings = []
     for i, node_feat in enumerate(file_node_tokens):
         if node_feat == 'None':
             colors.insert(i, 'lightgrey')
             assert colors[i] == 'lightgrey'
-        if node_feat in vectorizer_model.wv:
-            embeddings.append(vectorizer_model.wv[node_feat])
+        if node_feat in wv_model.wv:
+            embeddings.append(wv_model.wv[node_feat])
         else:
-            embeddings.append(vectorizer_model.wv['<UNK>'])
+            embeddings.append(wv_model.wv['<UNK>'])
     features = np.array(embeddings).astype(np.float32)
 
     # add color feature at the end of features
@@ -172,44 +219,39 @@ def normalize(mx):
 
 
 class ASTDataset(Dataset):
-    def __init__(self, preprocessed_file="preprocessed_data.pkl", data_path="data/"):
-        self.data_path = data_path
-        self.preprocessed_file = preprocessed_file
-        self.preprocessed_data = self.load_preprocessed_data()
+    def __init__(self, file_path):
+        self.file = h5py.File(file_path, 'r')
+        self.data_keys = list(self.file.keys())
+        self.length = len(self.file[self.data_keys[0]])
 
-    def load_preprocessed_data(self):
-        """从文件加载预处理的数据"""
-        with open(self.data_path + self.preprocessed_file, 'rb') as f:
-            return pickle.load(f)
 
     def __len__(self):
         """返回数据集的大小"""
-        return len(self.preprocessed_data)
+        return self.length
 
     def __getitem__(self, index):
-        """返回单个样本"""
-        return self.preprocessed_data[index]
+        # 获取每个数据项，按索引读取
+        before_embeddings = np.array(self.file[f"before_embeddings_{index}"])
+        before_adj = np.array(self.file[f"before_adj_{index}"])
+        after_embeddings = np.array(self.file[f"after_embeddings_{index}"])
+        after_adj = np.array(self.file[f"after_adj_{index}"])
+        label = np.array(self.file[f"label_{index}"])
+        metrics = np.array(self.file[f"metrics_tensor_{index}"])
+
+        return before_embeddings, before_adj, after_embeddings, after_adj, label, metrics
+
+    def close(self):
+        self.file.close()
 
 
-# 使用示例
-data_dict = {
-    'train': ['train_file1.json', 'train_file2.json'],
-    'val': ['val_file1.json', 'val_file2.json'],
-}
-
-commit_list = {
-    'train': 'train_commits.csv',
-    'val': 'val_commits.csv',
-}
-
-# 预处理并存储数据
-preprocess_data(data_dict, commit_list, data_path="path_to_data/", preprocessed_file="preprocessed_data.pkl")
-
-# 加载数据集
-dataset = ASTDataset(preprocessed_file="preprocessed_data.pkl", data_path="path_to_data/")
-dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
-
-# 训练循环
-for batch in dataloader:
-    before_embeddings, before_adj, after_embeddings, after_adj, label, metrics = batch
-    # 在这里可以进行模型训练
+if __name__ == '__main__':
+    print('--------start--------')
+    # learn_word2vec()
+    # word2vec = Word2Vec.load('../trained_models/wv_camel.model')
+    # print(word2vec.wv['<UNK>'])
+    # preprocess_data(data_lists, commit_lists, '/camel_train.h5', mode='val')
+    val_dataset = ASTDataset(os.path.join(data_path, 'camel_train.h5'))
+    val_loader = DataLoader(val_dataset, batch_size=1, shuffle=False)
+    for data in val_loader:
+        be, ba, ae, aa, l, m = data
+        print(be.shape, ae.shape, aa.shape, l.shape, m.shape)
