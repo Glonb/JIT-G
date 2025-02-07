@@ -31,12 +31,39 @@ def time_since(since):
     return '{}h {}min {:.2f} sec'.format(h, m, s)
 
 
-def evaluate(label, output):
-    return roc_auc(np.array(label), np.array(output))
+# def evaluate(label, output):
+#     return roc_auc(np.array(label), np.array(output))
 
+
+def evaluate(label, output):
+    # 如果 label 和 output 是 Python 列表，先将它们转换为 PyTorch 张量
+    if isinstance(label, list):
+        label = torch.tensor(label)
+    if isinstance(output, list):
+        output = torch.tensor(output)
+
+    # 确保 label 和 output 都在 CPU 上，然后转换为 NumPy 数组
+    label = label.cpu().numpy()  # 将 label 移动到 CPU 并转换为 NumPy 数组
+    output = output.cpu().numpy()  # 将 output 移动到 CPU 并转换为 NumPy 数组
+
+    return roc_auc(label, output)
+
+
+# def evaluate_more(label, output):
+#     return calculate_metrics(np.array(label), np.array(output))
 
 def evaluate_more(label, output):
-    return calculate_metrics(np.array(label), np.array(output))
+    # 如果 label 和 output 是 Python 列表，先将它们转换为 PyTorch 张量
+    if isinstance(label, list):
+        label = torch.tensor(label)
+    if isinstance(output, list):
+        output = torch.tensor(output)
+
+    # 确保 label 和 output 都在 CPU 上，然后转换为 NumPy 数组
+    label = label.cpu().numpy()
+    output = output.cpu().numpy()
+
+    return calculate_metrics(label, output)
 
 
 def pretrain(model, optimizer, criterion, epochs, train_loader, val_loader, so_far=0, resume=None):
@@ -232,10 +259,22 @@ def test(model, test_loader):
                                      after_embeddings, after_adj,
                                      metric)
 
-            y_scores.append(torch.sigmoid(output).item())
+            y_scores.append(torch.sigmoid(output))
             y_true.append(label)
 
-    pd.DataFrame({'y_true': y_true, 'y_score': y_scores}).to_csv(os.path.join(data_path, 'test_result.csv'))
+        # 合并所有 batch 的结果，并将其转换为 PyTorch 张量
+    y_scores = torch.cat(y_scores, dim=0)
+    y_true = torch.cat(y_true, dim=0)
+
+    # 确保 y_true 和 y_scores 都在相同的设备上（CPU 或 GPU）
+    y_scores = y_scores.to(device)
+    y_true = y_true.to(device)
+
+    # 将结果保存到 CSV 文件
+    pd.DataFrame({'y_true': y_true.cpu().numpy(), 'y_score': y_scores.cpu().numpy()}).to_csv(
+        os.path.join(data_path, 'test_result.csv'))
+
+    # pd.DataFrame({'y_true': y_true, 'y_score': y_scores}).to_csv(os.path.join(data_path, 'test_result.csv'))
     fpr, tpr, thresholds, auc = evaluate(y_true, y_scores)
     precision, recall, f1, mcc = evaluate_more(y_true, y_scores)
     # print('metrics: AUC={}\n'.format(auc))

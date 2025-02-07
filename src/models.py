@@ -77,8 +77,8 @@ class GraphConvolution(nn.Module):
             self.bias.data.uniform_(-stdv, stdv)
 
     def forward(self, feature, adj):
-        support = torch.mm(feature, self.weight)
-        output = torch.mm(adj, support)
+        support = torch.matmul(feature, self.weight)
+        output = torch.matmul(adj, support)
         if self.bias is not None:
             output += self.bias
         output = F.relu(output)
@@ -200,6 +200,10 @@ class JITGNN(nn.Module):
         self.fc = nn.Linear(self.neuron_size + metric_size, 1)
 
     def forward(self, b_x, b_adj, a_x, a_adj, metrics):
+        b_x = b_x.squeeze(0)
+        b_adj = b_adj.squeeze(0)
+        a_x = a_x.squeeze(0)
+        a_adj = a_adj.squeeze(0)
         # change the design here. add adjacency matrix to graph convolution class so not pass it every time.
         b_node_embeddings = self.gnn14(self.gnn13(self.gnn12(self.gnn11(b_x, b_adj), b_adj), b_adj), b_adj)
         b_embedding = self.attention(b_node_embeddings[:-1, :]).flatten()
@@ -207,7 +211,7 @@ class JITGNN(nn.Module):
         a_embedding = self.attention(a_node_embeddings[:-1, :]).flatten()
         # agg = torch.hstack([b_embedding, a_embedding])   # maybe a distance measure later
         agg = self.tensor_net(b_embedding, a_embedding).flatten()
-        features = torch.hstack([agg, metrics])
+        features = torch.hstack([agg, metrics.squeeze(0)])
 
         output = self.fc(features)
         return output, agg
