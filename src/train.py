@@ -15,6 +15,8 @@ import matplotlib.pyplot as plt
 BASE_PATH = os.path.dirname(os.path.dirname(__file__))
 data_path = os.path.join(BASE_PATH, 'data')
 
+cloud_path = '/root/autodl-tmp'
+
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print('device:', device)
 

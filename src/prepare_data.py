@@ -25,7 +25,7 @@ commit_lists = {
 
 def learn_word2vec(special_token=False):
     # 载入词向量模型
-    files = list(data_lists['train']) + list(data_lists['val'])
+    files = [data_lists['train'], data_lists['val']]
     corpus = []
     for f_name in files:
         with open(data_path + f_name) as fp:
@@ -57,7 +57,7 @@ def learn_word2vec(special_token=False):
     vectorizer_model.save('../trained_models/wv_camel.model')
 
 
-wv_model = Word2Vec.load('../trained_models/wv_camel.model')
+# wv_model = Word2Vec.load('../trained_models/wv_camel.model')
 
 
 def preprocess_data(data_list, commit_list, out_file, mode='train'):
@@ -222,8 +222,7 @@ class ASTDataset(Dataset):
     def __init__(self, file_path):
         self.file = h5py.File(file_path, 'r')
         self.data_keys = list(self.file.keys())
-        self.length = len(self.file[self.data_keys[0]])
-
+        self.length = len(self.data_keys) // 6
 
     def __len__(self):
         """返回数据集的大小"""
@@ -250,8 +249,13 @@ if __name__ == '__main__':
     # word2vec = Word2Vec.load('../trained_models/wv_camel.model')
     # print(word2vec.wv['<UNK>'])
     # preprocess_data(data_lists, commit_lists, '/camel_train.h5', mode='val')
-    val_dataset = ASTDataset(os.path.join(data_path, 'camel_train.h5'))
-    val_loader = DataLoader(val_dataset, batch_size=1, shuffle=False)
-    for data in val_loader:
-        be, ba, ae, aa, l, m = data
-        print(be.shape, ae.shape, aa.shape, l.shape, m.shape)
+    # val_dataset = ASTDataset(os.path.join(data_path, 'camel_train.h5'))
+    # val_loader = DataLoader(val_dataset, batch_size=1, shuffle=False)
+    # for i, (data) in enumerate(val_loader):
+    #     be, ba, ae, aa, l, m = data
+    #     print(l)
+    #     print(i)
+    with h5py.File('../data/camel_train.h5', 'r') as f:
+        data_keys = list(f.file.keys())
+        print(len(data_keys) // 6)
+        # print(f.file['before_embeddings_4361'].shape)

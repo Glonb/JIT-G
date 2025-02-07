@@ -12,6 +12,8 @@ import argparse
 BASE_PATH = os.path.dirname(os.path.dirname(__file__))
 data_path = os.path.join(BASE_PATH, 'data')
 
+cloud_path = '/root/autodl-tmp'
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -29,9 +31,9 @@ if __name__ == '__main__':
     val_dataset = ASTDataset(os.path.join(data_path, 'camel_val.h5'))
     test_dataset = ASTDataset(os.path.join(data_path, 'camel_test.h5'))
 
-    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=4)
-    val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=4)
-    test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=4)
+    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=4, pin_memory=False)
+    val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=4, pin_memory=False)
+    test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=4, pin_memory=False)
 
     hidden_size = args.word2vec_dim + 2  # plus supernode node feature and node colors
     print('hidden_size is {}'.format(hidden_size))
